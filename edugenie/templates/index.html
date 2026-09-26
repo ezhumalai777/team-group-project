@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="EduGenie - Lightweight AI-powered Educational Assistant powered by Google Gemini and FastAPI">
+  <title>EduGenie: Google Gemini Powered Learning Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Top Navigation & Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="logo-icon">🎓</div>
+        <div class="brand-text">
+          <h1>EduGenie <span class="sparkle">✨</span></h1>
+          <p class="tagline">Your personal AI tutor for learning support!</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="api-status-badge" id="apiKeyStatus" onclick="openKeyModal()" title="Click to configure Gemini API Key">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Checking API Key...</span>
+          <span class="key-icon">🔑</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Quick Scenario Presets -->
+    <section class="preset-banner">
+      <div class="preset-label">🚀 Quick Try Scenarios:</div>
+      <div class="preset-chips">
+        <button class="chip" onclick="fillScenario('qa', 'Which is the largest ocean?')">🌊 Largest Ocean (Q&A)</button>
+        <button class="chip" onclick="fillScenario('explain', 'Photosynthesis')">🌱 Photosynthesis (Explain)</button>
+        <button class="chip" onclick="fillScenario('quiz', 'The Pythagoras Theorem')">📐 Pythagoras Theorem (Quiz)</button>
+        <button class="chip" onclick="fillScenario('recommend', 'SQL')">💾 SQL Path (Recommend)</button>
+        <button class="chip" onclick="fillScenario('summary', 'The Industrial Revolution, which began in the late 18th century, marked a profound shift from manual agriculture to powered machinery. Innovations like the steam engine transformed manufacturing, boosted economies, and created urban centers.')">📜 Industrial Revolution (Summary)</button>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs / Task Selector (Milestone 3 Activity 3.1) -->
+    <nav class="task-nav" aria-label="Learning Tools">
+      <button class="nav-tab active" data-target="all" onclick="switchView('all')">📋 All Modules</button>
+      <button class="nav-tab" data-target="qa" onclick="switchView('qa')">💬 Q&A</button>
+      <button class="nav-tab" data-target="explain" onclick="switchView('explain')">💡 Explain</button>
+      <button class="nav-tab" data-target="summary" onclick="switchView('summary')">📝 Summary</button>
+      <button class="nav-tab" data-target="quiz" onclick="switchView('quiz')">🎯 Quiz</button>
+      <button class="nav-tab" data-target="recommend" onclick="switchView('recommend')">🗺️ Learning Path</button>
+    </nav>
+
+    <!-- 1. Q&A Module (Page 6 & 10) -->
+    <section class="module-card" id="card-qa">
+      <div class="module-header">
+        <div class="module-badge qna-badge">Q&A Module</div>
+        <h2>Ask EduGenie a Question</h2>
+        <p class="module-desc">Ask any academic question and receive smart, concise answers powered by Gemini 1.5 Pro.</p>
+      </div>
+      <form id="qaForm" onsubmit="handleQaSubmit(event)">
+        <label for="question"><strong>Ask EduGenie a Question:</strong></label>
+        <div class="input-row">
+          <input type="text" id="question" placeholder="Why is the sky blue?" required autocomplete="off">
+          <button type="submit" id="qaBtn" class="action-btn">
+            <span class="btn-text">Get Answer</span>
+            <span class="spinner" style="display:none;"></span>
+          </button>
+        </div>
+      </form>
+      <div id="qaResult" class="output"></div>
+    </section>
+
+    <!-- 2. Concept Explanation Module (Page 6 & 10) -->
+    <section class="module-card" id="card-explain">
+      <div class="module-header">
+        <div class="module-badge explain-badge">Explanation Module</div>
+        <h2>Need an Explanation?</h2>
+        <p class="module-desc">Breaks down complex educational concepts into clear, simple language tailored for students.</p>
+      </div>
+      <form id="explainForm" onsubmit="handleExplainSubmit(event)">
+        <label for="topic"><strong>Need an Explanation?</strong></label>
+        <div class="input-row">
+          <input type="text" id="topic" placeholder="Photosynthesis" required autocomplete="off">
+          <button type="submit" id="explainBtn" class="action-btn">
+            <span class="btn-text">Explain</span>
+            <span class="spinner" style="display:none;"></span>
+          </button>
+        </div>
+      </form>
+      <div id="explanationResult" class="output"></div>
+    </section>
+
+    <!-- 3. Summary Module (Page 8 & 10) -->
+    <section class="module-card" id="card-summary">
+      <div class="module-header">
+        <div class="module-badge summary-badge">Summarization Module</div>
+        <h2>Summarize a Paragraph</h2>
+        <p class="module-desc">Condenses long educational texts into concise summaries for quick revision without losing context.</p>
+      </div>
+      <form id="summaryForm" onsubmit="handleSummarySubmit(event)">
+        <label for="summaryText"><strong>Summarize a Paragraph:</strong></label>
+        <div class="input-stacked">
+          <textarea id="summaryText" rows="3" placeholder="Paste long content to summarize..." required></textarea>
+          <button type="submit" id="summaryBtn" class="action-btn align-self-end">
+            <span class="btn-text">Summarize</span>
+            <span class="spinner" style="display:none;"></span>
+          </button>
+        </div>
+      </form>
+      <div id="summaryResult" class="output"></div>
+    </section>
+
+    <!-- 4. Quiz Generation Module (Page 7 & 10 & 14) -->
+    <section class="module-card" id="card-quiz">
+      <div class="module-header">
+        <div class="module-badge quiz-badge">Quiz Generation Module</div>
+        <h2>Generate a Quiz</h2>
+        <p class="module-desc">Generates 3 multiple-choice questions with 4 options each. Test your mastery with instant answer verification!</p>
+      </div>
+      <form id="quizForm" onsubmit="handleQuizSubmit(event)">
+        <label for="quizText"><strong>Generate a Quiz:</strong></label>
+        <div class="input-row">
+          <input type="text" id="quizText" placeholder="Solar System" required autocomplete="off">
+          <button type="submit" id="quizBtn" class="action-btn">
+            <span class="btn-text">Generate Quiz</span>
+            <span class="spinner" style="display:none;"></span>
+          </button>
+        </div>
+      </form>
+      <div id="quizResult" class="output"></div>
+    </section>
+
+    <!-- 5. Learning Recommendations Module (Page 8 & 12 & 15) -->
+    <section class="module-card" id="card-recommend">
+      <div class="module-header">
+        <div class="module-badge recommend-badge">Learning Path Module</div>
+        <h2>Get Learning Recommendations</h2>
+        <p class="module-desc">Receive a personalized, progressive curriculum spanning Beginner to Advanced levels with curated resources.</p>
+      </div>
+      <form id="recommendForm" onsubmit="handleRecommendSubmit(event)">
+        <label for="recommendTopic"><strong>Get Learning Recommendations:</strong></label>
+        <div class="input-row">
+          <input type="text" id="recommendTopic" placeholder="e.g. Linear Regression" required autocomplete="off">
+          <button type="submit" id="recommendBtn" class="action-btn">
+            <span class="btn-text">Get Recommendations</span>
+            <span class="spinner" style="display:none;"></span>
+          </button>
+        </div>
+      </form>
+      <div id="recommendResult" class="output"></div>
+    </section>
+  </main>
+
+  <!-- Modal for API Key Setup -->
+  <div class="modal-backdrop" id="apiKeyModal" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🔑 Configure Google Gemini API Key</h3>
+        <button class="close-btn" onclick="closeKeyModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>EduGenie uses the official Google Gemini API for fast AI reasoning. Your key is stored locally in <code>.env</code>.</p>
+        <label for="apiKeyInput">Gemini API Key:</label>
+        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="modal-input">
+        <p class="modal-hint">Don't have a key? Get one for free at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+        <div id="keyUpdateMsg" class="modal-msg"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeKeyModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveApiKey()">Save API Key</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>EduGenie &bull; Built with FastAPI &amp; Google Gemini &bull; SmartBridge Learning Assistant</p>
+  </footer>
+
+  <script>
+    // Tab / View Switching
+    function switchView(tab) {
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.querySelector(`.nav-tab[data-target="${tab}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const cards = {
+        'qa': 'card-qa',
+        'explain': 'card-explain',
+        'summary': 'card-summary',
+        'quiz': 'card-quiz',
+        'recommend': 'card-recommend'
+      };
+
+      if (tab === 'all') {
+        Object.values(cards).forEach(id => {
+          document.getElementById(id).style.display = 'block';
+        });
+      } else {
+        Object.entries(cards).forEach(([key, id]) => {
+          document.getElementById(id).style.display = (key === tab) ? 'block' : 'none';
+        });
+        const targetEl = document.getElementById(cards[tab]);
+        if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    // Quick Fill Scenarios from Page 1
+    function fillScenario(module, val) {
+      switchView(module);
+      if (module === 'qa') {
+        document.getElementById('question').value = val;
+        document.getElementById('qaBtn').click();
+      } else if (module === 'explain') {
+        document.getElementById('topic').value = val;
+        document.getElementById('explainBtn').click();
+      } else if (module === 'summary') {
+        document.getElementById('summaryText').value = val;
+        document.getElementById('summaryBtn').click();
+      } else if (module === 'quiz') {
+        document.getElementById('quizText').value = val;
+        document.getElementById('quizBtn').click();
+      } else if (module === 'recommend') {
+        document.getElementById('recommendTopic').value = val;
+        document.getElementById('recommendBtn').click();
+      }
+    }
+
+    // Check API Key Status on Load
+    async function checkApiKeyStatus() {
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        const dot = document.getElementById('statusDot');
+        const text = document.getElementById('statusText');
+        if (data.configured) {
+          dot.className = 'status-dot online';
+          text.textContent = 'Gemini API: Ready';
+        } else {
+          dot.className = 'status-dot warning';
+          text.textContent = 'API Key Required';
+        }
+      } catch (e) {
+        console.error("Config check failed", e);
+      }
+    }
+
+    function openKeyModal() {
+      document.getElementById('apiKeyModal').style.display = 'flex';
+      document.getElementById('apiKeyInput').focus();
+    }
+
+    function closeKeyModal() {
+      document.getElementById('apiKeyModal').style.display = 'none';
+      document.getElementById('keyUpdateMsg').textContent = '';
+    }
+
+    async function saveApiKey() {
+      const key = document.getElementById('apiKeyInput').value.trim();
+      const msg = document.getElementById('keyUpdateMsg');
+      if (!key) {
+        msg.textContent = 'Please enter an API key.';
+        msg.className = 'modal-msg error';
+        return;
+      }
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: key })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.textContent = 'API Key saved successfully!';
+          msg.className = 'modal-msg success';
+          checkApiKeyStatus();
+          setTimeout(() => closeKeyModal(), 1200);
+        } else {
+          msg.textContent = data.error || 'Failed to save key.';
+          msg.className = 'modal-msg error';
+        }
+      } catch (err) {
+        msg.textContent = 'Error connecting to server.';
+        msg.className = 'modal-msg error';
+      }
+    }
+
+    function setLoading(btnId, isLoading) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      const text = btn.querySelector('.btn-text');
+      const spinner = btn.querySelector('.spinner');
+      btn.disabled = isLoading;
+      if (isLoading) {
+        if (text) text.style.opacity = '0.5';
+        if (spinner) spinner.style.display = 'inline-block';
+      } else {
+        if (text) text.style.opacity = '1';
+        if (spinner) spinner.style.display = 'none';
+      }
+    }
+
+    // Format plain text or Markdown to styled HTML
+    function formatMarkdown(text) {
+      if (!text) return '';
+      let clean = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      // Headers
+      clean = clean.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+      clean = clean.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+      clean = clean.replace(/^# (.*$)/gim, '<h2>$1</h2>');
+
+      // Bold & Italic
+      clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      clean = clean.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+      // Unordered lists
+      clean = clean.replace(/^\s*\*\s+(.*$)/gim, '<li>$1</li>');
+      clean = clean.replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>');
+
+      // Line breaks
+      clean = clean.replace(/\n\n/g, '<p></p>');
+      clean = clean.replace(/\n/g, '<br>');
+
+      return clean;
+    }
+
+    // 1. Q&A Handler
+    async function handleQaSubmit(e) {
+      e.preventDefault();
+      const question = document.getElementById('question').value.trim();
+      const resultDiv = document.getElementById('qaResult');
+      if (!question) return;
+
+      setLoading('qaBtn', true);
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<div class="loading-state"><span class="loading-spinner"></span> Asking EduGenie...</div>';
+
+      try {
+        const res = await fetch(`/qa?question=${encodeURIComponent(question)}`);
+        const data = await res.json();
+        const answer = data.answer || "No response received.";
+        resultDiv.innerHTML = `
+          <div class="result-box">
+            <div class="result-header">
+              <span class="result-label">Answer:</span>
+              <button class="copy-btn" onclick="navigator.clipboard.writeText('${encodeURIComponent(answer).replace(/'/g, "\\'")}')">Copy</button>
+            </div>
+            <div class="result-body">${formatMarkdown(answer)}</div>
+          </div>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="error-msg">⚠️ Failed to connect to server: ${err.message}</div>`;
+      } finally {
+        setLoading('qaBtn', false);
+      }
+    }
+
+    // 2. Explanation Handler
+    async function handleExplainSubmit(e) {
+      e.preventDefault();
+      const topic = document.getElementById('topic').value.trim();
+      const resultDiv = document.getElementById('explanationResult');
+      if (!topic) return;
+
+      setLoading('explainBtn', true);
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<div class="loading-state"><span class="loading-spinner"></span> Generating simple explanation...</div>';
+
+      try {
+        const res = await fetch('/explain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: topic })
+        });
+        const data = await res.json();
+        const explanation = data.explanation || data.error || "No explanation generated.";
+        resultDiv.innerHTML = `
+          <div class="result-box">
+            <div class="result-header">
+              <span class="result-label">Explanation:</span>
+            </div>
+            <div class="result-body">${formatMarkdown(explanation)}</div>
+          </div>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="error-msg">⚠️ Failed to connect to server: ${err.message}</div>`;
+      } finally {
+        setLoading('explainBtn', false);
+      }
+    }
+
+    // 3. Summarization Handler
+    async function handleSummarySubmit(e) {
+      e.preventDefault();
+      const text = document.getElementById('summaryText').value.trim();
+      const resultDiv = document.getElementById('summaryResult');
+      if (!text) return;
+
+      setLoading('summaryBtn', true);
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<div class="loading-state"><span class="loading-spinner"></span> Summarizing text...</div>';
+
+      try {
+        const res = await fetch('/summarize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text })
+        });
+        const data = await res.json();
+        const summary = data.summary || data.error || "No summary generated.";
+        resultDiv.innerHTML = `
+          <div class="result-box">
+            <div class="result-header">
+              <span class="result-label">Summary:</span>
+            </div>
+            <div class="result-body">${formatMarkdown(summary)}</div>
+          </div>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="error-msg">⚠️ Failed to connect to server: ${err.message}</div>`;
+      } finally {
+        setLoading('summaryBtn', false);
+      }
+    }
+
+    // 4. Quiz Generation Handler (Matches Page 14 Screenshot)
+    async function handleQuizSubmit(e) {
+      e.preventDefault();
+      const text = document.getElementById('quizText').value.trim();
+      const resultDiv = document.getElementById('quizResult');
+      if (!text) return;
+
+      setLoading('quizBtn', true);
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<div class="loading-state"><span class="loading-spinner"></span> Generating 3 MCQs...</div>';
+
+      try {
+        const res = await fetch('/quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text })
+        });
+        const data = await res.json();
+        const quizList = data.quiz;
+
+        if (!Array.isArray(quizList) || quizList.length === 0) {
+          resultDiv.innerHTML = `<div class="error-msg">⚠️ Could not parse quiz questions. Response: ${JSON.stringify(quizList)}</div>`;
+          return;
+        }
+
+        let html = `
+          <div class="result-box quiz-container">
+            <div class="result-header">
+              <span class="result-label">Quiz:</span>
+            </div>
+        `;
+
+        quizList.forEach((q, idx) => {
+          const qNum = idx + 1;
+          const optionsHtml = (q.options || []).map((opt, optIdx) => `
+            <label class="quiz-option-label" id="label-q${qNum}-opt${optIdx}">
+              <input type="radio" name="quiz_q_${qNum}" value="${opt.replace(/"/g, '&quot;')}" class="quiz-radio">
+              <span class="option-text">${opt}</span>
+            </label>
+          `).join('');
+
+          html += `
+            <div class="quiz-item" id="quiz-item-${qNum}">
+              <div class="quiz-question-title"><strong>Q${qNum}:</strong> ${q.question}</div>
+              <div class="quiz-options-group">
+                ${optionsHtml}
+              </div>
+              <button type="button" class="check-answer-btn" onclick="checkAnswer(${qNum}, '${encodeURIComponent(q.answer).replace(/'/g, "\\'")}')">Check Answer</button>
+              <div class="quiz-feedback" id="feedback-q${qNum}"></div>
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+        resultDiv.innerHTML = html;
+
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="error-msg">⚠️ Failed to connect to server: ${err.message}</div>`;
+      } finally {
+        setLoading('quizBtn', false);
+      }
+    }
+
+    // Answer Verification for Quiz (Matches Page 14 Screenshot)
+    function checkAnswer(qNum, encodedCorrectAnswer) {
+      const correctAnswer = decodeURIComponent(encodedCorrectAnswer);
+      const selected = document.querySelector(`input[name="quiz_q_${qNum}"]:checked`);
+      const feedbackDiv = document.getElementById(`feedback-q${qNum}`);
+
+      if (!selected) {
+        feedbackDiv.innerHTML = '<span class="feedback-warn">⚠️ Please select an option before checking.</span>';
+        return;
+      }
+
+      const userAnswer = selected.value;
+      if (userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+        feedbackDiv.innerHTML = '<div class="quiz-feedback-box correct">✅ Correct!</div>';
+      } else {
+        feedbackDiv.innerHTML = `<div class="quiz-feedback-box incorrect">❌ Incorrect. Correct answer: <strong>${correctAnswer}</strong></div>`;
+      }
+    }
+
+    // 5. Learning Recommendations Handler (Matches Page 15 & 16)
+    async function handleRecommendSubmit(e) {
+      e.preventDefault();
+      const topic = document.getElementById('recommendTopic').value.trim();
+      const resultDiv = document.getElementById('recommendResult');
+      if (!topic) return;
+
+      setLoading('recommendBtn', true);
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<div class="loading-state"><span class="loading-spinner"></span> Generating structured learning recommendations...</div>';
+
+      try {
+        const res = await fetch(`/learn/recommendations?topic=${encodeURIComponent(topic)}`);
+        const data = await res.json();
+        const recommendation = data.recommendation || "No recommendations generated.";
+        resultDiv.innerHTML = `
+          <div class="result-box learning-path-box">
+            <div class="result-header">
+              <span class="result-label">Learning Recommendations for "${data.topic || topic}":</span>
+              <button class="copy-btn" onclick="navigator.clipboard.writeText('${encodeURIComponent(recommendation).replace(/'/g, "\\'")}')">Copy</button>
+            </div>
+            <div class="result-body formatted-markdown">${formatMarkdown(recommendation)}</div>
+          </div>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="error-msg">⚠️ Failed to connect to server: ${err.message}</div>`;
+      } finally {
+        setLoading('recommendBtn', false);
+      }
+    }
+
+    // Initialize API Key check on page load
+    window.addEventListener('DOMContentLoaded', checkApiKeyStatus);
+  </script>
+</body>
+</html>
